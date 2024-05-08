@@ -1,46 +1,51 @@
 package balancer
 
 import (
-	"net/http"
 	"net/http/httputil"
 	"net/url"
 )
 
 type Server interface {
+	GetServer() *httputil.ReverseProxy
+	GetUrl() string
 	SetAlive(bool)
-	Alive() bool
-	GetUrl() *url.URL
-	GetActiveConnections() int
-	Serve(http.ResponseWriter, http.Request)
+	IsAlive() bool
+	GetConnections() int
 }
 
-func NewServer(Url *url.URL) *server {
-	return &server{url: Url}
+type ProxyServer struct {
+	Proxy       *httputil.ReverseProxy
+	Url         string
+	Alive       bool
+	Connections int
 }
 
-type server struct {
-	url         *url.URL
-	alive       bool
-	connections int
+func NewServer(Url *url.URL) Server {
+	proxy := httputil.NewSingleHostReverseProxy(Url)
+	return &ProxyServer{
+		Proxy:       proxy,
+		Url:         Url.String(),
+		Alive:       true,
+		Connections: 0,
+	}
 }
 
-func (s *server) SetAlive(Alive bool) {
-	s.alive = Alive
+func (s *ProxyServer) IsAlive() bool {
+	return s.Alive
 }
 
-func (s *server) Alive() bool {
-	return s.alive
+func (s *ProxyServer) SetAlive(status bool) {
+	s.Alive = status
 }
 
-func (s *server) GetUrl() *url.URL {
-	return s.url
+func (s *ProxyServer) GetServer() *httputil.ReverseProxy {
+	return s.Proxy
 }
 
-func (s *server) GetActiveConnections() int {
-	return s.connections
+func (s *ProxyServer) GetUrl() string {
+	return s.Url
 }
 
-func (s *server) Serve(w http.ResponseWriter, r *http.Request) {
-	Proxy := httputil.NewSingleHostReverseProxy(s.url)
-	Proxy.ServeHTTP(w, r)
+func (s *ProxyServer) GetConnections() int {
+	return s.Connections
 }

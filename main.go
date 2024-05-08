@@ -1,48 +1,16 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
-	"net/http/httputil"
-	"net/url"
 
-	"github.com/ajayjadhav201/golang-load-balancer/balancer"
-)
-
-var (
-	authServer     = "http://localhost:8000"
-	productServer1 = "http:localhost:8090"
-	productServer2 = "http:localhost:8091"
+	"github.com/ajayjadhav201/load-balancer-go/balancer"
 )
 
 func main() {
-	//Handle Auth Server
-	authUrl, err := url.Parse(authServer)
-	if err != nil {
-		log.Fatal("Auth url is incorrect")
-	}
-	AuthProxy := httputil.NewSingleHostReverseProxy(authUrl)
-	http.HandleFunc("/auth", AuthProxy.ServeHTTP)
+	lb := balancer.NewLoadBalancer(balancer.RoundRobinLoadBalancer)
 	//
+	http.HandleFunc("/api/v1", lb.Serve) //loadbalancer will route all the api request to available servers
 	//
-	sp := balancer.NewServerPool(
-		balancer.NewServer(productServer1),
-		balancer.NewServer(productServer2),
-	)
-	rr := balancer.NewRoundRobin(sp)
-	// Handle Product Server
-	// ProductLB := balancer.NewRRbalancer(
-	// 	productServer1, productServer2)
-	//
-	//
-	http.HandleFunc("/product", func(w http.ResponseWriter, r *http.Request) {
-		rr.Serve(w, r)
-		// url := ProductLB.NextServer()
-		// ProductProxy := httputil.NewSingleHostReverseProxy(url)
-		// ProductProxy.ServeHTTP(w, r)
-	})
-	// starting Load Balancer
-	fmt.Print("Starting Load Balancer...")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(":80", nil))
 }
